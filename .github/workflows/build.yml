@@ -1,0 +1,32 @@
+name: Build Jarvis
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Unpack project and add speech models
+        run: |
+          unzip -o *.zip
+          curl -L -o model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          unzip -q model.zip
+          mv vosk-model-small-en-us-0.15 jarvis/app/src/main/assets/model
+          curl -L -o spk.zip https://alphacephei.com/vosk/models/vosk-model-spk-0.4.zip
+          unzip -q spk.zip
+          mv vosk-model-spk-0.4 jarvis/app/src/main/assets/spk-model
+      - name: Build
+        working-directory: jarvis
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-apk
+          path: jarvis/app/build/outputs/apk/debug/app-debug.apk
